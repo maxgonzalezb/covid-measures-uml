@@ -6,6 +6,11 @@ library(dplyr)
 library(tidyverse)
 library(factoextra)
 library(usa)
+library(amerika)
+library(ggrepel)
+point_colors <- c(amerika_palettes$Republican[2], 
+                  amerika_palettes$Democrat[2])
+
 #0. Extract Data and clean some columns. two URLs, for USA and the world.
 #urlfile="https://raw.githubusercontent.com/OxCGRT/covid-policy-tracker/master/data/OxCGRT_latest.csv"
 
@@ -13,18 +18,16 @@ library(usa)
 urlfile.usa="https://raw.githubusercontent.com/OxCGRT/USA-covid-policy/master/data/OxCGRT_US_latest.csv"
 urlfile.govs="https://raw.githubusercontent.com/CivilServiceUSA/us-governors/master/us-governors/data/us-governors.csv"
 
-
 df <- read_csv(url(urlfile.usa)) %>% filter(!is.na(RegionName)) %>%
                                       rename(date = Date) %>%
                                   mutate(date = as.Date(as.character(date), format = '%Y%m%d'))
 facts<-facts
 governors<-read_csv(url(urlfile.govs))%>%dplyr::select(1:10)
+state_variables=facts%>%left_join(governors,by = c('name'='state_name'))%>%rename('RegionName'='name')
 
 ##Merge with US data from USA package. Use library(usa)
-df=df%>%left_join(facts,by = c('RegionName'='name'))
-
-
-
+df=df%>%left_join(facts,by = c('RegionName'='name'))%>%mutate(deaths_1000=ConfirmedDeaths/(population*1000),cases_1000=ConfirmedCases/(population*1000))
+df=df%>%left_join(governors,by = c('RegionName'='state_name'))
 
 #TODO: Exploratory Analysis(some plots about key variables, summary statistics)
 
@@ -75,7 +78,9 @@ pca_out=get_pca(pca_fit)
 df.coords.pc=pca_out$coord%>%as.data.frame()
 df.coords.pc=df.coords.pc%>%mutate(varnames=rownames(df.coords.pc))
 #df.coords.pc=pca_fit$rotation%>%as.data.frame()
-df.coords.x=pca_fit$x%>%as.data.frame()%>%mutate(RegionName=df.pca$RegionName,maxdeaths=df.aroundpeak.meanmeasures$newdeaths)
+
+#Create a datset with the results and other variables
+df.coords.x=pca_fit$x%>%as.data.frame()%>%mutate(RegionName=df.pca$RegionName,maxdeaths=df.aroundpeak.meanmeasures$newdeaths)%>%left_join(state_variables)%>%mutate(deaths_1000=(maxdeaths*1000)/(population))
 
 ###Plot without color
 ggplot(df.coords.pc,aes(x=Dim.1,y=3*Dim.2))+geom_segment(aes(x=0, y=0, xend=5*Dim.1, yend=5*Dim.2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color="red")+
@@ -84,17 +89,27 @@ ggplot(df.coords.pc,aes(x=Dim.1,y=3*Dim.2))+geom_segment(aes(x=0, y=0, xend=5*Di
   geom_text(data=df.coords.x, aes(x=PC1, y=PC2, label=RegionName), size = 3,alpha=0.75, vjust=1, color="black")+
   theme_bw()
 
-###Color by maximum number of deaths. TODO: scale by population in the future.
+###Color by maximum number of deaths. 
 ggplot(df.coords.x)+geom_segment(data=df.coords.pc,aes(x=0, y=0, xend=5*Dim.1, yend=5*Dim.2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color="red")+
   geom_text(data=df.coords.pc, aes(x=5*Dim.1, y=5*Dim.2, label=varnames), size = 4,alpha=0.75, vjust=1, color="red")+
-  geom_point(data=df.coords.x, aes(x=PC1 , y=PC2,color=log(maxdeaths) ), size = 5,alpha=0.75)+
+  geom_point(data=df.coords.x, aes(x=PC1 , y=PC2,color=log(deaths_1000) ), size = 5,alpha=0.75)+
   geom_text(data=df.coords.x, aes(x=PC1, y=PC2, label=RegionName), size = 3,alpha=0.75, vjust=1, color="black")+
 theme_bw()+scale_color_continuous(type = 'viridis')+labs(color='Log Max Daily Deaths')
 
-#TODO: similar plots but considering maximum variables
-#TODO: color by political, urban/non-urban, GDP variables. 
-#TODO: find countries most similar to each U.S. State(could be only from Europe). Color by absolute difference. 
+###Color by partisanship
+  ggplot(df.coords.x)+geom_segment(data=df.coords.pc,aes(x=0, y=0, xend=5*Dim.1, yend=5*Dim.2), arrow=arrow(length=unit(0.2,"cm")), alpha=1, color="darkgrey",lwd=.8)+
+  geom_text_repel(data=df.coords.pc, aes(x=5*Dim.1, y=5*Dim.2, label=varnames), size = 4,alpha=0.75, vjust=1, color="black")+
+  geom_point(data=df.coords.x, aes(x=PC1 , y=PC2,color= party), size = 5,alpha=0.55)+
+  geom_text(data=df.coords.x, aes(x=PC1, y=PC2, label=RegionName,color=party), size = 3.3,alpha=1, vjust=1.5)+
+  theme_bw()+scale_color_manual(values=c(amerika_palettes$Republican[1], 
+                                         amerika_palettes$Democrat[1]),
+                                name="Party",
+                                breaks=c("republican", "democrat"),
+                                labels=c("Republican", "Democrat")) +theme(legend.position = 'top')+xlim(-5.5,6.5)#+scale_color_continuous(type = 'viridis')+labs(color='Log Max Daily Deaths')
 
+#TODO: find countries most similar to each U.S. State(could be only from Europe). Color by absolute difference. 
+#TODO: clustering
+  
 #3. Start Analysis with SOM
 
 data(stat)
