@@ -8,6 +8,8 @@ library(factoextra)
 library(usa)
 library(amerika)
 library(ggrepel)
+library(cowplot)
+
 point_colors <- c(amerika_palettes$Republican[2], 
                   amerika_palettes$Democrat[2])
 
@@ -29,9 +31,6 @@ state_variables=facts%>%left_join(governors,by = c('name'='state_name'))%>%renam
 df=df%>%left_join(facts,by = c('RegionName'='name'))%>%mutate(deaths_1000=ConfirmedDeaths/(population*1000),cases_1000=ConfirmedCases/(population*1000))
 df=df%>%left_join(governors,by = c('RegionName'='state_name'))
 
-#TODO: Exploratory Analysis(some plots about key variables, summary statistics)
-
-
 #1. Create Datasets
 ##Define Types of Measures
 containment_measures=c('C1_School closing','C2_Workplace closing','C3_Cancel public events','C4_Restrictions on gatherings',
@@ -42,6 +41,8 @@ health_measures=c('H1_Public information campaigns','H2_Testing policy','H3_Cont
 country_variables=c('CountryName','CountryCode','RegionName','Date')
 outcome_variables=c('ConfirmedDeaths','ConfirmedCases')
 
+df.measures=df[,c("RegionName","date",containment_measures,economic_measures,health_measures)]
+
 ##Get the date with the top number of new deaths for each state
 df.maxdeaths = df %>% group_by(RegionName) %>% mutate(newdeaths = ConfirmedDeaths -
                                                         lag(ConfirmedDeaths, order_by = date)) %>%
@@ -51,7 +52,6 @@ df.maxdeaths = df %>% group_by(RegionName) %>% mutate(newdeaths = ConfirmedDeath
   mutate(date.min30 = date.max - 30, date.plus30 = date.max + 30)
 
 ##Subset only numeric variables of interest
-df.measures=df[,c("RegionName","date",containment_measures,economic_measures,health_measures)]
 
 ##Get the policy measures for 30 days before and after the max date.
 df.aroundpeak=df.measures%>%left_join(df.maxdeaths,by = 'RegionName')%>%filter(date>date.min30&date<date.plus30)
@@ -61,15 +61,29 @@ df.aroundpeak.meanmeasures = df.aroundpeak %>% group_by(RegionName) %>% summaris
   mutate(across(where(is.numeric), round, 3))
 df.aroundpeak.maxmeasures = df.aroundpeak %>% group_by(RegionName) %>% summarise_if(is.numeric, max, na.rm = TRUE) %>%
   mutate(across(where(is.numeric), round, 3))
-#write.csv(df.aroundpeak.meanmeasures,row.names = F,file="C:\\repos\\covid-measures-uml\\MeasuresUSA.csv")
+##write.csv(df.aroundpeak.meanmeasures,row.names = F,file="C:\\repos\\covid-measures-uml\\MeasuresUSA.csv")
 
-#Show when each state had its peak and how much was it.
+##Show when each state had its peak and how much was it.
 ggplot(df.aroundpeak,aes(x=date,y=newdeaths))+geom_line(aes(color=RegionName))+scale_y_log10()+theme_bw()+ylab('Peak Deaths')
 
+##Descriptive analysis: TODO Scale variables by maximum value in total(need auxiliary dataset)
+measures.vector=c(containment_measures,economic_measures,health_measures)#%>%select(`E3_Fiscal measures`, `H4_Emergency investment in healthcare`)%>%
+measures.summary=df.aroundpeak%>%select(all_of(measures.vector))%>%
+                  pivot_longer(cols=(2:length(measures.vector)))%>%group_by(name)%>%
+                  summarise(N=length(name),mean=mean(value,na.rm = T),sd=sd(value,na.rm = T),min=min(value,na.rm = T),max=max(value,na.rm = T))%>%filter(mean<10&mean>0)
+top5.mean=measures.summary%>%slice_max(order_by = mean,n=5)%>%mutate(Type='Top 5, Mean')
+bottom5.mean=measures.summary%>%slice_min(order_by = mean,n=5)%>%mutate(Type='Bootom 5, Mean')
+top5.sd=measures.summary%>%slice_max(order_by = sd,n=5)%>%mutate(Type='Top 5, SD')
+bottom5.sd=measures.summary%>%slice_min(order_by = sd,n=5)%>%mutate(Type='Bootom 5, SD')
+measures.summary.mean=rbind(top5.mean,bottom5.mean)
+measures.summary.simple=measures.summary%>%mutate(type=substr(name,1,1),name=substr(name,4,nchar(name)))
+ggplot(measures.summary.simple,aes(x=mean,y=sd))+geom_point(aes(color=type))+geom_text_repel(aes(label=name))+theme_bw()
+  
 #2. Research question: 
 ##PCA exploratory analysis
 df.pca=df.aroundpeak.meanmeasures%>%select(-'H5_Investment in vaccines',-'newdeaths')
 df.pca=df.pca%>%replace_na(list(0))%>%mutate(across(where(is.numeric),~ifelse(is.nan(.x),yes=0,no=.x)))
+df.pca=df.pca%>%replace_na(list(0))%>%mutate(across(where(is.numeric),scale))
 pca_fit <- select(df.pca[,], -RegionName) %>%
   scale() %>% 
   prcomp(); summary(pca_fit)
@@ -107,9 +121,20 @@ theme_bw()+scale_color_continuous(type = 'viridis')+labs(color='Log Max Daily De
                                 breaks=c("republican", "democrat"),
                                 labels=c("Republican", "Democrat")) +theme(legend.position = 'top')+xlim(-5.5,6.5)#+scale_color_continuous(type = 'viridis')+labs(color='Log Max Daily Deaths')
 
+  
+##Clustering similar types of responses
+  
+  
+  
 #TODO: find countries most similar to each U.S. State(could be only from Europe). Color by absolute difference. 
 #TODO: clustering
   
 #3. Start Analysis with SOM
 
-data(stat)
+OLD{
+#   p1<-ggplot(top5.mean,aes(x=reorder(name, mean),y=mean))+geom_bar(stat='identity',color='black',fill='deepskyblue4')+coord_flip()+facet_wrap(~Type)+theme_bw()+ylab('Mean')+xlab('')+theme(strip.text  =  element_text(size=15),axis.text = element_text(size=12,color='black'))
+#   p2<-ggplot(bottom5.mean,aes(x=reorder(name, -mean),y=mean))+geom_bar(stat='identity',color='black',fill='deepskyblue4')+coord_flip()+facet_wrap(~Type)+theme_bw()+ylab('Mean')+xlab('')+theme(strip.text  =  element_text(size=15),axis.text = element_text(size=12,color='black'))
+#   p3<-ggplot(top5.sd,aes(x=reorder(name, sd),y=mean))+geom_bar(stat='identity',color='black',fill='deepskyblue4')+coord_flip()+facet_wrap(~Type)+theme_bw()+ylab('Mean')+xlab('')+theme(strip.text  =  element_text(size=15),axis.text = element_text(size=12,color='black'))
+#   p4<-ggplot(bottom5.sd,aes(x=reorder(name, -sd),y=mean))+geom_bar(stat='identity',color='black',fill='deepskyblue4')+coord_flip()+facet_wrap(~Type)+theme_bw()+ylab('Mean')+xlab('')+theme(strip.text  =  element_text(size=15),axis.text = element_text(size=12,color='black'))
+#   cplot=cowplot::plot_grid(plotlist = list(p1,p2),ncol = 2,nrow = 2)
+ }
