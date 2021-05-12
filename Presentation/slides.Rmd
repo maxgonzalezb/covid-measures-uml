@@ -1,0 +1,129 @@
+---
+title: "Presentation"
+author: "Team"
+date: "11-05-2021"
+output: beamer_presentation
+header-includes:
+ - \usepackage{booktabs}
+ - \graphicspath{{"C:\\repos\\Presentation\\presentation-figures"}}
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+```
+
+## Motivation and project objective
+
+The COVID-19 pandemic has elicited a wide array of responses from policymakers and political authorities. 
+Among similar types measures, there is heterogeneity in their stringency or their degree of enforcement. 
+
+Also, the public responds differently to the different types of measures. 
+
+ \textbf{Objectives of this project}
+ 
+- Group US states according to different types of COVID responses. 
+- Identify variables that are correlated with each group.  
+- Understand the public's response to these measures. 
+
+# Analyzing COVID-19 US states' response
+
+## Data and Methodology
+COVID measures dataset: Oxford Policy Tracker
+
+- Follows daily levels of 10 types of COVID measures for the 50 US states. 
+- Each variable is an integer taking values from  zero to three or four.
+- The higher the value, the higher the restrictions/stringency of the implemented policy. 
+
+Our methodology
+
+- Select the period of 30 days before and after the peak number of new deaths,
+- Average the level of response, for each type of variable.
+- Compare this average across states
+
+## Categories of measures and measures included
+
+\begin{table}[]
+\centering
+\caption{Categories and Variable types}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{|c|c|c|}
+\hline
+Containment & Health & Economic\\
+\hline
+\hline
+School Closings & Public info campaigns & Income Support\\
+Workplace closing & Testing Policy & Debt relief\\
+Cancel public events & Contact Tracing & Fiscal Measures\\
+Restrictions on gatherings & Emergency investment & International Support\\
+Close public transport & Investment in vaccines &\\
+Stay at home requirements & Facial coverings & \\
+Restrictions on internal movement & Vaccination policy &  \\
+International travel controls & Protection of elderly people & \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+
+## Understanding types of responses : PCA results
+\centering
+![PCA components and original features](./presentation-figures/dimension_space.png){scale=83%}
+
+## Where are US states positioned?
+
+\centering
+![PCA components for USA states](./presentation-figures/dimension_space_states.png){scale=83%}
+
+## What groups can be identified?
+![US States clustered by k-means cluster](./presentation-figures/clusters.png){scale=83%}
+
+
+
+## Is governors' partisanship a good segmenting variable?
+\centering
+![PCA components for USA states. Color is political partisanship of current governor.](./presentation-figures/plot_partisan_governors_varnames.png){scale=83%}
+
+## Is governors' partisanship a good segmenting variable?
+\centering
+![PCA components for USA states. Color is political partisanship of current governor.](./presentation-figures/plot_partisan_governors_novarnames.png){scale=83%}
+
+## Are measures better separated by people's preferences or authorities' partisanship?
+
+
+- We are interested in investigating wether people's preferences are a better segmenting variable than governor's partizanship.
+- We leverage the cases where the governor is of the opposite political side of the majority of the pópulation (e.g. A. Schwarzenegger)
+
+- This leads to the following set of states: 
+
+\begin{table}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{cccc}
+\toprule
+State & Party & Republican Advantage in Population & Leaning\\
+\midrule
+Florida & republican & -5.38 & democrat\\
+Kansas & democrat & 9.36 & republican\\
+Maine & democrat & 9.14 & republican\\
+Maryland & republican & -22.24 & democrat\\
+Massachusetts & republican & -10.87 & democrat\\
+Oklahoma & republican & -5.25 & democrat\\
+Vermont & republican & -10.29 & democrat\\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+
+## In general, segmentation improves
+\centering
+![States that change group after considering population's political leaning](./presentation-figures/plot_partisan_leanings.png){scale=83%}
+
+## Summary
+
+- In general we observe states grouped by the types of measures taken during the peak period of the pandemic. 
+- Political partizanship of authorities can be a good segmenting variable in the space of measures taken. 
+- Grouping by the political leaning of the population in general improves the previous segmentation, especially for heavy democrat states like Vermont, Maryland and Massachusets. 
+
+# Analysis of public's response: tweets
