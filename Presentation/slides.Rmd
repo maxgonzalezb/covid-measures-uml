@@ -1,7 +1,7 @@
 ---
-title: "Presentation"
-author: "Team"
-date: "11-05-2021"
+title: "COVID-19 containment measures and the public's response"
+author: "R. Atkinson, M. Gonzalez, J. Interrante, K. Lee, L.Tian"
+date: "12-05-2021"
 output: beamer_presentation
 header-includes:
  - \usepackage{booktabs}
@@ -16,18 +16,18 @@ knitr::opts_chunk$set(echo = FALSE)
 
 ## Motivation and project objective
 
-The COVID-19 pandemic has elicited a wide array of responses from policymakers and political authorities. 
+The COVID-19 pandemic has elicited a wide array of measures from policymakers and political authorities. 
 Among similar types measures, there is heterogeneity in their stringency or their degree of enforcement. 
 
 Also, the public responds differently to the different types of measures. 
 
  \textbf{Objectives of this project}
  
-- Group US states according to different types of COVID responses. 
+- Group US states according to different strategies of COVID containment. 
 - Identify variables that are correlated with each group.  
 - Understand the public's response to these measures. 
 
-# Analyzing COVID-19 US states' response
+# Analyzing COVID-19 US states' measures
 
 ## Data and Methodology
 COVID measures dataset: Oxford Policy Tracker
@@ -89,11 +89,11 @@ International travel controls & Protection of elderly people & \\
 \centering
 ![PCA components for USA states. Color is political partisanship of current governor.](./presentation-figures/plot_partisan_governors_novarnames.png){scale=83%}
 
-## Are measures better separated by people's preferences or authorities' partisanship?
+## Are measures better separated by people's affinities or authorities' partisanship?
 
 
 - We are interested in investigating wether people's preferences are a better segmenting variable than governor's partizanship.
-- We leverage the cases where the governor is of the opposite political side of the majority of the pópulation (e.g. A. Schwarzenegger)
+- We leverage the cases where the governor is of the opposite political side of the majority of the population (e.g. A. Schwarzenegger)
 
 - This leads to the following set of states: 
 

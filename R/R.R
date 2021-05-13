@@ -103,7 +103,7 @@ df.coords.pc=df.coords.pc%>%mutate(varnames=rownames(df.coords.pc))%>%left_join(
 
 #Create a datset with the results and other variables
 df.coords.x=pca_fit$x%>%as.data.frame()%>%mutate(RegionName=df.pca$RegionName,maxdeaths=df.aroundpeak.meanmeasures$newdeaths)%>%left_join(state_variables)%>%mutate(deaths_1000=(maxdeaths*1000)/(population))
-
+fviz_pca_biplot(pca_fit, label = "var")
 ##Plots
 p.dims.onlydims=ggplot(df.coords.pc,aes(x=Dim.1,y=3*Dim.2))+geom_segment(aes(x=0, y=0, xend=5*Dim.1, yend=5*Dim.2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color="black")+
   geom_label_repel( aes(x=5*Dim.1, y=5*Dim.2, label=substr(name_clean,1,27),color=type), size = 3.5,alpha=1, vjust=1,fontface  = "bold")+
