@@ -1,0 +1,97 @@
+library(here)
+library(tidyverse)
+library(arules)
+library(tidytext)
+library(textdata)
+library(utf8)
+library(arules)
+
+
+
+# Import data
+covid_03_29 <- read.csv("2020-03-29 Coronavirus Tweets.csv")
+covid_03_29 <- covid_03_29 %>% select(c(text, lang, user_id)) %>% filter(lang == "en") %>% select(-lang)
+
+# clean text by removing emojis and other symbols
+covid_03_29 <- as_utf8(covid_03_29$text)
+covid_03_29 <- gsub("[^\x01-\x7F]", "", covid_03_29) %>% as_tibble()
+### citation: ttps://stackoverflow.com/questions/44893354/remove-emoticons-in-r-using-tm-package
+
+# clean text by removing http links
+#### citation: https://stackoverflow.com/questions/25352448/remove-urls-from-string
+covid_03_29 <- gsub(" ?(f|ht)(tp)(s?)(://)(.*)[.|/](.*)", "", covid_03_29$value) %>% as_tibble()
+
+
+# tokenizing text
+covid_03_30_text <- covid_03_29 %>% ungroup() %>% unnest_tokens(word, value)
+
+# removing stopwords
+data(stop_words)
+covid_03_30_text <- covid_03_30_text %>% anti_join(stop_words)
+
+
+      ######### sentiment stuff
+
+# bing sentiment
+bing_sentiment <- get_sentiments("bing")
+bing_sentiment_result <- covid_03_30_text %>% inner_join(bing_sentiment)
+
+# nrc sentiment
+nrc_sentiment <- get_sentiments("nrc")
+nrc_sentiment_out <- covid_03_30_text %>% inner_join(nrc_sentiment)
+# afinn sentiment
+afinn_sentiment <- get_sentiments("afinn")
+afinn_sentiment_out <- covid_03_30_text %>% inner_join(afinn_sentiment)
+
+# bing plot
+b_s_c <- bing_sentiment_result %>% count(sentiment)
+ggplot(b_s_c, aes(x = sentiment, y = n, fill = sentiment)) +
+  geom_col() +
+  labs(title = "Bing Sentiment Counts for Selection of ARPA Tweets", x = "sentiment", y = "Number of Words")
+# afinn plot
+a_s_c <- afinn_sentiment_out %>% count(value)
+ggplot(a_s_c, aes(x = value, y = n)) +
+  geom_col() +
+  labs(title = "Afinn Sentiment Counts for Selection of ARPA Tweets", x = "sentiment", y = "Number of Words")
+
+
+    ##### need to plot much better
+# nrc plot
+n_s_c <- nrc_sentiment_out %>% count(sentiment)
+ggplot(n_s_c, aes(x = reorder(sentiment, -n), y = n)) +
+  geom_col() +
+  labs(title = "NRC Sentiment Counts for Selection of ARPA Tweets", x = "sentiment", y = "Number of Words")
+
+
+
+### next: turn sentiments into factors
+
+# bing attempt, not there yet
+bing_leveled <- as_factor(bing_sentiment_result$sentiment) %>% as_tibble()
+bing <- write.csv(bing_leveled, "bing.csv")
+bingo <- read.transactions("bing.csv")
+
+# afinn attempt
+
+afino_leveled <- afinn_sentiment_out %>% select(value)
+afino <- write.csv(afino_leveled, "afino.csv")
+afinooo <- read.transactions("afino.csv")
+
+summary(afinooo)
+itemFrequencyPlot(afinooo, topN = 15)
+
+
+
+?as_factor
+
+
+?as_factor
+
+#### merging datasets
+
+
+# combining two data sets: idea is that it removes duplicate texts that appear on each day, so only
+# new text will appear in the overall dataset if iterated overall all csv files
+covid_all <- anti_join(covid_03_29, covid_03_30, by = "text")
+
+
