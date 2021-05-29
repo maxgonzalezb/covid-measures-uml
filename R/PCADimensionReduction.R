@@ -1,10 +1,10 @@
+set.seed(3)
 #Start with df
 ##2.1 PCA exploratory analysis
 df.pca=df.aroundpeak.meanmeasures%>%select(-'H5_Investment in vaccines',-'newdeaths')
 df.pca=df.pca%>%replace_na(list(0))%>%mutate(across(where(is.numeric),~ifelse(is.nan(.x),yes=0,no=.x)))
 df.pca=df.pca%>%replace_na(list(0))%>%mutate(across(where(is.numeric),scale))
 pca_fit <- select(df.pca[,], -RegionName) %>%
-  scale() %>% 
   prcomp(); summary(pca_fit)
 
 pca_out=get_pca(pca_fit)
@@ -37,16 +37,40 @@ df.clustering= df.clustering[,-1]
 tidy.name.vector <- make.names(colnames(df.clustering), unique=TRUE)
 colnames(df.clustering)<-tidy.name.vector
 
-set.seed(3)
+#Study Different Types of Clustering
+clustering.matrix=df.clustering[,-1]%>%as.matrix()
+rownames(clustering.matrix)=df.clustering[,1]
+clustering.analysis <- clValid (clustering.matrix,
+                                     clMethods = c('hierarchical',"kmeans", "model"),
+                                   validation = "internal",nClust = 2:10)
+op <- par(no.readonly=TRUE)
+par(mfrow=c(2,2),mar=c(4,4,3,1))
+plot(clustering.analysis, legend=FALSE)
+plot(nClusters(clustering.analysis),measures(clustering.analysis,"Dunn")[,,1],type="n",axes=F,xlab="",ylab="")
+legend("center", clusterMethods(clustering.analysis), col=1:9, lty=1:9, pch=paste(1:9))
+par(op)
+
+#The most reasonable seems to be k-means at 4, combining metrics with domain expertise.
 nclusts=4
-kmeans.cluster=kmeans(df.clustering,centers = nclusts,iter.max = 1000)
+kmeans.cluster=kmeans(df.clustering,centers = nclusts,iter.max = 1000,nstart=10)
+
 clustering.results=(df.coords.x)%>%mutate(cluster=kmeans.cluster$cluster)
 p.cluster=ggplot(df.coords.pc,aes(x=Dim.1,y=3*Dim.2))+geom_segment(aes(x=0, y=0, xend=5*Dim.1, yend=5*Dim.2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.25, color="black")+
   #geom_label_repel( aes(x=5*Dim.1, y=5*Dim.2, label=substr(name_clean,1,27)), size = 2.5,alpha=1, vjust=1)+
   #geom_point(data=df.coords.x, aes(x=PC1 , y=PC2 ), size = 1.3,alpha=0.9, color="lightblue")+
-  geom_label(data=clustering.results, aes(x=PC1, y=PC2, label=RegionName,color=as.factor(cluster)), size = 3.5,alpha=0.75, vjust=1)+
+  geom_label_repel(data=clustering.results, aes(x=PC1, y=PC2, label=RegionName,color=as.factor(cluster)), size = 3.5,alpha=0.75, vjust=1)+
   theme_bw()+xlab('')+ylab('')+xlim(-5.5,6.5)+theme(legend.position = 'none')
 p.cluster
+
+#Interpret the clusters by showing specific variables in them 
+#Select three variables, get min, max, average by cluster. 
+most_variance_category=c('E2_Debt/contract relief','H6_Facial Coverings','C7_Restrictions on internal movement')
+clustering.results.interpret=df.aroundpeak.meanmeasures%>%left_join(clustering.results%>%select(RegionName,cluster),by=c('RegionName'='RegionName'))
+clustering.results.interpret=clustering.results.interpret%>%select(RegionName,most_variance_category,cluster)%>%pivot_longer(cols = most_variance_category)%>%group_by(cluster,name)%>%
+  summarise(meanv=mean(value),maxv=max(value),minv=min(value))%>%ungroup()%>%pivot_longer(cols = meanv:minv,names_to='Measure')
+p.intepreting=ggplot(clustering.results.interpret%>%filter(Measure=='meanv'),aes(x=0,y=value,fill=as.factor(cluster)))+
+  geom_bar(stat='identity',position='dodge')+facet_wrap(~name)+theme_classic()
+p.intepreting
 
 ##2.3 COlor by segmenting variables
 ## Color by maximum number of deaths. 

@@ -14,6 +14,7 @@ library(clValid)
 library(mclust)
 library(poliscidata)
 library(kableExtra)
+library(RColorBrewer)
 setwd('C:\\repos\\covid-measures-uml\\')
 Sys.setlocale("LC_ALL", "English")
 
@@ -80,9 +81,6 @@ df.aroundpeak.maxmeasures = df.aroundpeak %>% group_by(RegionName) %>%
   summarise_if(is.numeric, max, na.rm = TRUE) %>%
   mutate(across(where(is.numeric), round, 3))
 
-#Save data for analysis of dimension reduction
-save(df.aroundpeak.meanmeasures,file = '.\\data\\MeasuresAroundPeakDf.Rdata')
-write.csv(df.maxdeaths,'.\\data\\Peak day of new deaths by US state.csv')
 
 #save(df.aroundpeak.meanmeasures,row.names = F,file="C:\\repos\\covid-measures-uml\\MeasuresUSA.Rdata")
 ##write.csv(df.aroundpeak.meanmeasures,row.names = F,file="C:\\repos\\covid-measures-uml\\MeasuresUSA.csv")
@@ -117,7 +115,11 @@ most_variance_category=c('E2_Debt/contract relief','H6_Facial Coverings','C7_Res
 
 measures.summary.simple=measures.summary%>%mutate(type=substr(name,1,1),name_clean=substr(name,4,nchar(name)))
 measure_types=measures.summary.simple%>%select(name,name_clean,type)%>%rbind(data.frame(name=c('E3_Fiscal measures','H4_Emergency investment in healthcare'),name_clean=c('Fiscal measures','Emergency investment in healthcare'),type=c('E','H')))
+
 #ggplot(measures.summary.simple,aes(x=mean,y=sd))+geom_point(aes(color=type))+geom_text_repel(aes(label=name))+theme_bw()
+Save data for analysis of dimension reduction
+save(df.aroundpeak.meanmeasures,file = '.\\data\\MeasuresAroundPeakDf.Rdata')
+write.csv(df.maxdeaths,'.\\data\\Peak day of new deaths by US state.csv')
 
 ##Create plots for presentation
 png(filename="C:\\repos\\covid-measures-uml\\Presentation\\presentation-figures\\plot_peak_deaths.png",width = 12, height = 7,
