@@ -8,11 +8,12 @@ pca_fit <- select(df.pca[,], -RegionName) %>%
   prcomp(); summary(pca_fit)
 
 pca_out=get_pca(pca_fit)
-df.coords.pc=pca_out$coord%>%as.data.frame()
+df.coords.pc=pca_out$coord%>%as.data.frame()*-1
 df.coords.pc=df.coords.pc%>%mutate(varnames=rownames(df.coords.pc))%>%left_join(measure_types,by=c('varnames'='name'))
 
 #Create a datset with the results and other variables
-df.coords.x=pca_fit$x%>%as.data.frame()%>%mutate(RegionName=df.pca$RegionName,maxdeaths=df.aroundpeak.meanmeasures$newdeaths)%>%left_join(state_variables)%>%mutate(deaths_1000=(maxdeaths*1000)/(population))
+df.coords.x=pca_fit$x%>%as.data.frame()*-1
+df.coords.x=df.coords.x%>%mutate(RegionName=df.pca$RegionName,maxdeaths=df.aroundpeak.meanmeasures$newdeaths)%>%left_join(state_variables)%>%mutate(deaths_1000=(maxdeaths*1000)/(population))
 fviz_pca_biplot(pca_fit, label = "var")
 ##Plots
 p.dims.onlydims=ggplot(df.coords.pc,aes(x=Dim.1,y=3*Dim.2))+geom_segment(aes(x=0, y=0, xend=5*Dim.1, yend=5*Dim.2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color="black")+
@@ -54,11 +55,11 @@ par(op)
 nclusts=4
 kmeans.cluster=kmeans(df.clustering,centers = nclusts,iter.max = 1000,nstart=10)
 
-clustering.results=(df.coords.x)%>%mutate(cluster=kmeans.cluster$cluster)
+clustering.results=(df.coords.x)%>%mutate(cluster=as.factor(kmeans.cluster$cluster))
 p.cluster=ggplot(df.coords.pc,aes(x=Dim.1,y=3*Dim.2))+geom_segment(aes(x=0, y=0, xend=5*Dim.1, yend=5*Dim.2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.25, color="black")+
   #geom_label_repel( aes(x=5*Dim.1, y=5*Dim.2, label=substr(name_clean,1,27)), size = 2.5,alpha=1, vjust=1)+
   #geom_point(data=df.coords.x, aes(x=PC1 , y=PC2 ), size = 1.3,alpha=0.9, color="lightblue")+
-  geom_label_repel(data=clustering.results, aes(x=PC1, y=PC2, label=RegionName,color=as.factor(cluster)), size = 3.5,alpha=0.75, vjust=1)+
+  geom_label_repel(data=clustering.results, aes(x=PC1, y=PC2, label=RegionName,color=(cluster)), size = 3.5,alpha=0.75, vjust=1)+
   theme_bw()+xlab('')+ylab('')+xlim(-5.5,6.5)+theme(legend.position = 'none')
 p.cluster
 
@@ -68,13 +69,13 @@ most_variance_category=c('E2_Debt/contract relief','H6_Facial Coverings','C7_Res
 clustering.results.interpret=df.aroundpeak.meanmeasures%>%left_join(clustering.results%>%select(RegionName,cluster),by=c('RegionName'='RegionName'))
 clustering.results.interpret=clustering.results.interpret%>%select(RegionName,most_variance_category,cluster)%>%pivot_longer(cols = most_variance_category)%>%group_by(cluster,name)%>%
   summarise(meanv=mean(value),maxv=max(value),minv=min(value))%>%ungroup()%>%pivot_longer(cols = meanv:minv,names_to='Measure')
-p.intepreting=ggplot(clustering.results.interpret%>%filter(Measure=='meanv'),aes(x=0,y=value,fill=as.factor(cluster)))+
-  geom_bar(stat='identity',position='dodge')+facet_wrap(~name)+theme_classic()
-p.intepreting
+p.intepreting=ggplot(clustering.results.interpret%>%filter(Measure=='meanv'),aes(x=0,y=value,fill=(cluster)))+
+    geom_bar(stat='identity',position='dodge',color='black')+facet_wrap(~name)+theme_classic()+labs(fill='Clusters')+
+  theme(text=element_text(size=20))
 
 ##2.3 COlor by segmenting variables
 ## Color by maximum number of deaths. 
-ggplot(df.coords.x)+geom_segment(data=df.coords.pc,aes(x=0, y=0, xend=5*Dim.1, yend=5*Dim.2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color="red")+
+plot.outcome.segmenting<-ggplot(df.coords.x)+geom_segment(data=df.coords.pc,aes(x=0, y=0, xend=5*Dim.1, yend=5*Dim.2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color="red")+
   geom_text(data=df.coords.pc, aes(x=5*Dim.1, y=5*Dim.2, label=varnames), size = 4,alpha=0.75, vjust=1, color="red")+
   geom_point(data=df.coords.x, aes(x=PC1 , y=PC2,color=log(deaths_1000) ), size = 5,alpha=0.75)+
   geom_text(data=df.coords.x, aes(x=PC1, y=PC2, label=RegionName), size = 3,alpha=0.75, vjust=1, color="black")+
@@ -146,6 +147,11 @@ dev.off()
 png(filename="C:\\repos\\covid-measures-uml\\Presentation\\presentation-figures\\clusters.png",width = 12, height = 7,
     units = "in",res=1000)
 p.cluster
+dev.off()
+
+png(filename="C:\\repos\\covid-measures-uml\\Presentation\\presentation-figures\\interpreting_clusters.png",width = 12, height = 7,
+    units = "in",res=1000)
+p.intepreting
 dev.off()
 
 ##Clustering similar types of responses: had
