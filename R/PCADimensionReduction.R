@@ -27,7 +27,7 @@ p.dims.states=ggplot(df.coords.pc,aes(x=Dim.1,y=3*Dim.2))+geom_segment(aes(x=0, 
   #geom_point(data=df.coords.x, aes(x=PC1 , y=PC2 ), size = 1.3,alpha=0.9, color="lightblue")+
   geom_text(data=df.coords.x, aes(x=PC1, y=PC2, label=RegionName), size = 3.5,alpha=0.75, vjust=1, color="black")+
   theme_bw()+xlab('')+ylab('')+xlim(-5.5,6.5)+theme(legend.position = 'none')
-p.dims.states
+
 
 ## 2.2 Clustering
 df.clustering=df.pca%>%as.data.frame()
@@ -61,7 +61,7 @@ p.cluster=ggplot(df.coords.pc,aes(x=Dim.1,y=3*Dim.2))+geom_segment(aes(x=0, y=0,
   #geom_point(data=df.coords.x, aes(x=PC1 , y=PC2 ), size = 1.3,alpha=0.9, color="lightblue")+
   geom_label_repel(data=clustering.results, aes(x=PC1, y=PC2, label=RegionName,color=(cluster)), size = 3.5,alpha=0.75, vjust=1)+
   theme_bw()+xlab('')+ylab('')+xlim(-5.5,6.5)+theme(legend.position = 'none')
-p.cluster
+
 
 #Interpret the clusters by showing specific variables in them 
 #Select three variables, get min, max, average by cluster. 
@@ -75,12 +75,29 @@ p.intepreting=ggplot(clustering.results.interpret%>%filter(Measure=='meanv'),aes
 
 ##2.3 COlor by segmenting variables
 ## Color by maximum number of deaths. 
-plot.outcome.segmenting<-ggplot(df.coords.x)+geom_segment(data=df.coords.pc,aes(x=0, y=0, xend=5*Dim.1, yend=5*Dim.2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color="red")+
-  geom_text(data=df.coords.pc, aes(x=5*Dim.1, y=5*Dim.2, label=varnames), size = 4,alpha=0.75, vjust=1, color="red")+
-  geom_point(data=df.coords.x, aes(x=PC1 , y=PC2,color=log(deaths_1000) ), size = 5,alpha=0.75)+
+plot.outcome.segmenting<-ggplot(df.coords.x)+geom_segment(data=df.coords.pc,aes(x=0, y=0, xend=5*Dim.1, yend=5*Dim.2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color="darkgrey")+
+  #geom_text(data=df.coords.pc, aes(x=5*Dim.1, y=5*Dim.2, label=varnames), size = 4,alpha=0.75, vjust=1, color="red")+
+  geom_point(data=df.coords.x, aes(x=PC1 , y=PC2,color=maxdeaths ), size = 5,alpha=0.75)+
   geom_text(data=df.coords.x, aes(x=PC1, y=PC2, label=RegionName), size = 3,alpha=0.75, vjust=1, color="black")+
-  theme_bw()+scale_color_continuous(type = 'viridis')+labs(color='Log Max Daily Deaths')
+  theme_bw()+scale_color_continuous(type = 'viridis',limits=c(0,800), oob = scales::squish)+labs(color='Max Daily Deaths\n')+
+  theme(legend.position="bottom",legend.spacing.x = unit(00.5, 'cm'))+
+  guides(fill = guide_legend(label.position = "bottom"))+ggtitle('Max Deaths and measures')+xlab('PCA1')+ylab('PCA2')
+plot.outcome.segmenting
 
+## Color by maximum number of deaths_scaled. 
+plot.outcome.segmenting.scaled<-ggplot(df.coords.x)+geom_segment(data=df.coords.pc,aes(x=0, y=0, xend=5*Dim.1, yend=5*Dim.2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color="darkgrey")+
+ # geom_text(data=df.coords.pc, aes(x=5*Dim.1, y=5*Dim.2, label=varnames), size = 4,alpha=0.75, vjust=1, color="red")+
+  geom_point(data=df.coords.x, aes(x=PC1 , y=PC2,color=(deaths_1000) ), size = 5,alpha=0.75)+
+  geom_text(data=df.coords.x, aes(x=PC1, y=PC2, label=RegionName), size = 3,alpha=0.75, vjust=1, color="black")+
+  theme_bw()+labs(color='Max Daily Deaths/Population \n * 1000')+
+  scale_color_continuous(type = 'viridis',limits=c(0,0.1), oob = scales::squish)+
+  theme(legend.position="bottom",legend.spacing.x = unit(00.5, 'cm'))+
+  guides(fill = guide_legend(label.position = "bottom"))+ggtitle('Max Deaths (Scaled by population) and measures')+xlab('PCA1')+ylab('PCA2')
+  plot.outcome.segmenting.scaled
+
+plot.outcomes.grouped=cowplot::plot_grid(plot.outcome.segmenting,plot.outcome.segmenting.scaled,ncol = 2)
+
+  
 ###Color by partisanship
 plot.partisan.governors.varnames<-ggplot(df.coords.x)+geom_segment(data=df.coords.pc,aes(x=0, y=0, xend=5*Dim.1, yend=5*Dim.2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.5, color="darkgrey",lwd=.8)+
   geom_text_repel(data=df.coords.pc, aes(x=5*Dim.1, y=5*Dim.2, label=name_clean), size = 4,alpha=0.75, vjust=1, color="black")+
@@ -92,6 +109,9 @@ plot.partisan.governors.varnames<-ggplot(df.coords.x)+geom_segment(data=df.coord
                                 breaks=c("republican", "democrat"),
                                 labels=c("Republican", "Democrat")) +theme(legend.position = 'none')+xlim(-5.5,6.5)#+scale_color_continuous(type = 'viridis')+labs(color='Log Max Daily Deaths')
 
+
+
+#Analyze segmentation by governors
 plot.partisan.governors.novarnames<-ggplot(df.coords.x)+geom_segment(data=df.coords.pc,aes(x=0, y=0, xend=5*Dim.1, yend=5*Dim.2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.5, color="darkgrey",lwd=.8)+
   #geom_text_repel(data=df.coords.pc, aes(x=5*Dim.1, y=5*Dim.2, label=name_clean), size = 4,alpha=0.75, vjust=1, color="black")+
   #geom_point(data=df.coords.x, aes(x=PC1 , y=PC2,color= party), size = 3,alpha=0.55)+
@@ -152,6 +172,11 @@ dev.off()
 png(filename="C:\\repos\\covid-measures-uml\\Presentation\\presentation-figures\\interpreting_clusters.png",width = 12, height = 7,
     units = "in",res=1000)
 p.intepreting
+dev.off()
+
+png(filename="C:\\repos\\covid-measures-uml\\Presentation\\presentation-figures\\igrouped_outcomes.png",width = 12, height = 7,
+    units = "in",res=1000)
+plot.outcomes.grouped
 dev.off()
 
 ##Clustering similar types of responses: had
